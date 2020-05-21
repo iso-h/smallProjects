@@ -1,45 +1,16 @@
 import curses
 from curses import wrapper
 import os 
-import time
+import random
 
 """
-Snake head is working, can't get body to spawn or follow, get to run
+Works, but needs a lot of touch up and improvements, pass through walls, speed up with 
+length, etc.
 """
-	
+
 class Field():
-	def __init__(self, dimX, dimY):
-		self.X = dimX
-		self.Y = dimY
-		self.f = None
-
-	def construct_field(self):
-		pad = curses.newwin(0,0 )
-		self.f = pad
-		self.f.keypad(True)
-		self.f.addstr(5, 5, "frik")
-		"""
-		for y in range(0,99):
-			for x in range(0,99):
-				pad.addch('.')
-				
-				# Displays a section of the pad in the middle of the screen.
-				# (0,0) : coordinate of upper-left corner of pad area to display.
-				# (5,5) : coordinate of upper-left corner of window area to be filled
-				#         with pad content.
-				# (20, 75) : coordinate of lower-right corner of window area to be
-				#          : filled with pad content.
-				self.f = pad
-				pad.refresh( 0,0, 5,5, 20,75)
-		"""
-
-class GameField(Field):
-	def __init__(self, field, worm):
-		self.f = field
-		self.worm = worm
-
-	def construct(self):
-		pass
+	def __init__(self):
+		self.f = curses.newwin(0,0)
 
 class Snake():
 	def __init__(self, length, field):
@@ -57,55 +28,27 @@ class Snake():
 		self.startingY = round(self.f.f.getmaxyx()[0]/2)
 		self.head = [[self.startingY, self.startingX]]
 
-	def check(self, coord):
-		wcheck_s = str(self.head) + ' ' + str(coord) + '\n'
-		with open('test.txt', 'w') as fi:
-			fi.write(wcheck_s)
-		if coord == self.head:
-			return 1
-		
 	def move(self):
-		z = 0
-		j = []
-		first = True
-
 		self.blast = self.head[-1]
 		if len(self.head) < self.l:
 			self.head.append([])
 		self.f.f.addstr(self.head[0][0], self.head[0][1], ' ')
 		j = [self.head[0][0], self.head[0][1]]
 
-		for x in self.head:
-			curses.napms(500)
-			self.f.f.addstr(2,0, str(z))
-			self.f.f.addstr(3,0, str(j))
-			if first:
-				if self.direction == "dUp":
-					self.head[0][0] = int(self.head[0][0] - 1)
-				if self.direction == "dDown":
-					self.head[0][0] = self.head[0][0] + 1
-				if self.direction == "dLeft":
-					self.head[0][1] = self.head[0][1] - 1
-				if self.direction == "dRight":
-					self.head[0][1] = self.head[0][1] + 1
-				first = False
-			
-			elif x != []:
-				self.head[i].pop()
-				self.head.insert(z, self.head[z-1])
-				self.f.f.addstr(6,0, str(self.head[z-1]))
-				self.f.f.addstr(4,0, str(x))
-			elif x == []:
-				try:
-					self.head[i].pop()
-					self.head.insert(z, self.head[z-1])
-					self.f.f.addstr(6,0, str(self.head[z-1]))
-					self.f.f.addstr(4,0, str(x))
-					return
-				except:
-					pass
-			z += 1
-				
+		if self.direction == "dUp":
+			self.head.insert(0, [self.head[0][0] - 1, self.head[0][1]])
+		if self.direction == "dDown":
+			self.head.insert(0, [self.head[0][0] + 1, self.head[0][1]])
+		if self.direction == "dLeft":
+			self.head.insert(0, [self.head[0][0], self.head[0][1] - 1])
+		if self.direction == "dRight":
+			self.head.insert(0, [self.head[0][0], self.head[0][1] + 1])
+
+		self.head.pop()
+
+		if self.head[0] in self.head[1:]:
+			kill()
+
 	def setDirection(self, direction):
 		self.direction = direction
 	
@@ -130,19 +73,24 @@ class Snake():
 		except:
 			pass
 
-def kill():
-	pass
+class Apple():
+	def __init__(self, field):
+		self.f = field
+		self.Y, self.X = random.randrange(self.f.f.getmaxyx()[0]), random.randrange(self.f.f.getmaxyx()[1])
 	
-def gameLoop(gF):
-	pass
+	def draw(self):
+		self.f.f.addstr(self.Y, self.X, '@')
 
+def kill():
+	sys.exit()
+	
 def main(stdscr):
 	dimX = 10
 	dimY = 10
 	length = 4
-	hill = Field(dimX, dimY)
+	hill = Field()
 	snek = Snake(length, hill) 
-	gF = GameField(hill, snek)
+	apple = Apple(hill)
 	
 	curses.curs_set(False)
 	curses.start_color()
@@ -150,7 +98,6 @@ def main(stdscr):
 	stdscr.clear()
 	stdscr.nodelay(1)
 
-	hill.construct_field()
 	snek.construct()
 
 	while True:
@@ -172,8 +119,14 @@ def main(stdscr):
 		hill.f.addstr(1,0, str(snek.head))
 
 		snek.move()
+		if snek.head[0] == [apple.Y, apple.X]:
+			del apple
+			apple = Apple(hill)
+			snek.l += 1
+
 		snek.printSnake()
-		
+		apple.draw()
+
 		hill.f.refresh()
 		curses.napms(200)
 
